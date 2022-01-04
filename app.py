@@ -1,46 +1,55 @@
-from flask import Flask
+from flask import Flask, jsonify, request
 from flask_pymongo import PyMongo
 from bson.json_util import dumps
 from bson.objectid import ObjectId
 from flask import request
-from flask import jsonify, request
-from werkzeug.security import  generate_password_hash,check_password_hash
 
 
 app = Flask(__name__)
-app.secret_key = "secretkey"
-app.config["MONGO_URI"] = "mongodb://localhost:27017/testDB"
+
+# app.config['MONGO_DBNAME'] = 'flask'
+app.config['MONGO_URI'] = 'mongodb://localhost/mongo_connect_flassk'
+
 mongo = PyMongo(app)
 
-@app.route('/add', methods=['POST'])
-def add_user():
-    _json = request.json
-    _name = _json['name']
-    _email = _json['email']
-   
+@app.route('/framework', methods=['GET'])
+def get_all_frameworks():
 
-    if _name and _email and request.method == 'POST':
-        id = mongo.db.users.insert({'name': _name,
-                                   'email': _email
-                                   
-        })
+    framework = mongo.db.test1 
 
-        response = jsonify("Successfull")
+    output = []
 
-        response.status_code = 200
-        return response
+    for q in framework.find():
+      output.append({'name' : q['name'], 'language' : q['language']})
+
+    return jsonify({'result' : output})
+
+@app.route('/framework/<name>', methods=['GET'])
+def get_one_framework(name):
+    framework = mongo.db.test1
+
+    q = framework.find_one({'name' : name})
+
+    if q:
+        output = {'name' : q['name'], 'language' : q['language']}
     else:
-        return not_found()
-        
-@app.errorhandler(404)
-def not_found(error=None):
-    message = {
-        'status': 404,
-        'message': 'Not Found' + request.url
-    }
-    response = jsonify(message)
-    response.status_code = 404
-    return response
+        output = 'No results found'
 
-if __name__ == "__main__":
+    return jsonify({'result' : output})
+
+@app.route('/framework', methods=['POST'])
+def add_framework():
+    framework = mongo.db.test1
+
+    name = request.json['name']
+    language = request.json['language']
+
+    framework_id = framework.insert_one({'name' : name, 'language' : language})
+    new_framework = framework.find_one({'_id' : framework_id})
+
+    output = {'name' : new_framework['name'], 'language' : new_framework['language']}
+
+    return jsonify({'result' :output})
+
+if __name__ == '__main__':
     app.run(debug=True)
